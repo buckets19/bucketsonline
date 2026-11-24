@@ -8395,11 +8395,14 @@ function pvStage(){
   Object.assign(DM.ball,{st:'held',holder:p.id,t:0}); DM.poss=p.team;
   V.pvNoCelly = kind!=='cel';
   const shoot=()=>{ p.wantA=true; const t0=PV; setTimeout(()=>{ if(PV===t0) p.relA=SWEET; }, SWEET*METER_T*1000+20); };
-  if(kind==='dunk'){ p.x=h.cx-h.dir*178; p.z=0; p.vx=h.dir*430; p.inX=h.dir; const t0=PV; setTimeout(()=>{ if(PV===t0) p.wantA=true; }, 70); }
+  if(kind==='dunk'){ p.x=h.cx-h.dir*210; p.z=0; p.vx=h.dir*430; p.inX=h.dir; const t0=PV, t1=performance.now();
+    // press SHOOT once actually inside dunk range (a timer pressed it too early = a layup with no release = a miss)
+    const iv=setInterval(()=>{ if(PV!==t0 || performance.now()-t1>1500){ clearInterval(iv); return; } const v=hoopVec(p,h); if(v.d<125){ p.wantA=true; clearInterval(iv); } }, 16); }
   else if(kind==='js'||kind==='trail'){ p.x=h.cx-h.dir*300; p.z=30; p.face=h.dir; setTimeout(shoot, 120); }
   else if(kind==='gfx'){ p.x=h.cx-h.dir*300; p.z=30; p.face=h.dir; V.lastGreenId='pv0'; greenFx(id,p.x,p.y,p.z,h.cx); levelFx(p.x,p.y+150,p.z,lvOf('gfx',id)); floatText('GREEN!',p.x,p.y+215,p.z,'#47e27a',32); }
   else if(kind==='cel'){ p.x=h.cx-h.dir*260; p.z=20; p.face=-h.dir; V.celly={id:'pv0',kind:id,t:0}; }
-  else if(kind==='ball'){ p.x=COURT_W/2-h.dir*80; p.z=20; p.bot=true; }
+  else if(kind==='ball'){ p.x=h.cx-h.dir*520; p.z=20; p.inX=h.dir; const t0=PV, t1=performance.now();   // dribble in (shows the ball), then a green
+    const iv=setInterval(()=>{ if(PV!==t0 || performance.now()-t1>2500){ clearInterval(iv); return; } if(hoopVec(p,h).d<300){ p.inX=0; p.inZ=0; clearInterval(iv); setTimeout(shoot, 150); } }, 16); }
   camX=PX(p.x,p.z); V.camTS=camX;                          // no slow camera pan
 }
 function pvBar(){ let b=$('#pvBar'); if(!b){ b=el('div'); b.id='pvBar'; document.body.append(b); }
