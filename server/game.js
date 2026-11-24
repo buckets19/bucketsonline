@@ -12,7 +12,8 @@ const GRACE_MS = 15000;
 // 💸 Cloudflare bills every second a room has players connected, so rooms don't sit open doing nothing:
 const RESULTS_STEP_MS = 6000;               // ranked/queue games: stop simulating this long after the final buzzer
 const RESULTS_CLOSE_MS = 25000;             // ...and hang up here (the iPad keeps showing the results; it already has them)
-const LOBBY_IDLE_MS = 8 * 60000;            // a private lobby with no game and nobody doing anything for 8 minutes closes                    // a player whose Wi-Fi drops keeps their spot this long
+const LOBBY_IDLE_MS = 4 * 60000;            // a private lobby with no game and nobody doing anything for 4 minutes closes
+const SILENT_MS = 40000;                    // an iPad pings every second (even on bad Wi-Fi, just late): 40s of total silence = it's gone (app closed / screen locked): hang up                    // a player whose Wi-Fi drops keeps their spot this long
 const NO_GEAR = new Set(['t','name','pk','duo','r2','q','exp','create','party','rr','id','rejoin','c','tok']);
 import CAT from './catalog.js';
 import { walGear } from './wallet.js';
@@ -33,7 +34,8 @@ export class GameRoom {
     this.owner = null; this.RM = null; this.q = null; this.code = ''; this.emAt = new Map(); this.prAt = new Map(); this.ac = this.ac || new Map(); this.tok = new Map(); this.rk = null;
     if (this.loop) clearInterval(this.loop); this.loop = null;
     if (this.qTimer) clearTimeout(this.qTimer); this.qTimer = null;
-    if (this.endT) clearTimeout(this.endT); this.endT = null; if (this.idleT) clearTimeout(this.idleT); this.idleT = null; this.overAt = 0; this.lastAct = Date.now();
+    if (this.endT) clearTimeout(this.endT); this.endT = null; if (this.idleT) clearTimeout(this.idleT); this.idleT = null;
+    if (this.reapT) clearInterval(this.reapT); this.reapT = null; this.seen = new Map(); this.overAt = 0; this.lastAct = Date.now();
   }
   // say goodbye to everyone and empty the room (nothing left running = nothing billed)
   closeAll(note) {
@@ -54,6 +56,7 @@ export class GameRoom {
     ws.addEventListener('message', ev => {
       let d; try { d = JSON.parse(ev.data); } catch (e) { return; }
       if (!d || typeof d !== 'object') return;
+      this.seen.set(ws, Date.now());
       try { if (!id) id = this.hello(ws, d); else this.onMsg(id, d, ws); } catch (e) { console.log('room error', e && e.stack); }
     });
     const gone = () => { if (id) this.lost(id, ws); };
@@ -109,7 +112,7 @@ export class GameRoom {
 
   // ---------------------------------------------------------------- joining
   hello(ws, d) {
-    let G = this.G; this.lastAct = Date.now(); if (!this.idleT) this.idleCheck();
+    let G = this.G; this.lastAct = Date.now(); if (!this.idleT) this.idleCheck(); if (!this.reapT) this.reapT = setInterval(() => this.reap(), 10000);
     if (d.t !== 'hello') { ws.close(1000); return null; }
     const empty = this.humans() === 0;
     // coming back after a Wi-Fi drop: same id, same spot
@@ -233,6 +236,14 @@ export class GameRoom {
     if (this.owner === id) { const h = [...G.players.values()].find(p => !p.bot); this.owner = h ? h.id : null; }
     if (this.humans() === 0) { this.reset(); return; }
     this.pushRoster();
+  }
+  // zombie connections (iPad asleep / app switched) keep a room open and billed: close them, the normal
+  // dropped-Wi-Fi rules take it from there (15s to come back, then the spot is freed)
+  reap() {
+    const now = Date.now();
+    for (const [id, s] of [...this.socks]) { if (s.away) continue; const t = this.seen.get(s.ws) || 0;
+      if (now - t > SILENT_MS) { try { s.ws.close(4008, 'silent'); } catch (e) {} this.lost(id, s.ws); } }
+    if (!this.socks.size && this.reapT) { clearInterval(this.reapT); this.reapT = null; }
   }
   lost(id, ws) {
     const s = this.socks.get(id); if (!s || s.ws !== ws) return;
