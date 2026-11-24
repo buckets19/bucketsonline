@@ -20,6 +20,7 @@
   var b64=function(str){ var u=new TextEncoder().encode(str), bin=''; for(var i=0;i<u.length;i+=8192) bin+=String.fromCharCode.apply(null, u.subarray(i,i+8192)); return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); };
   var unb64=function(t){ t=t.replace(/-/g,'+').replace(/_/g,'/'); while(t.length%4) t+='='; var bin=atob(t), u=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new TextDecoder().decode(u); };
   try{
+    if(location.protocol==='http:' && /bucketsonline\.site$/.test(location.hostname)){ location.replace('https://'+location.host+location.pathname+location.search+location.hash); return; }   // always the secure address (saves live there)
     if(location.hostname===OLD){   // the old site: pack up and go
       var pack={v:1, k:{}}; for(var i=0;i<KEYS.length;i++){ var v=localStorage.getItem(KEYS[i]); if(v!==null) pack.k[KEYS[i]]=v; }
       document.write('<p style="font:800 20px sans-serif;text-align:center;margin-top:40vh">Buckets moved! Taking you there with your stuff…</p>');
