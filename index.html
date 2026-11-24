@@ -11,20 +11,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
 <!-- multiplayer library: served from this site first (school filters often block CDNs), then backups -->
 <script>
-// 🚚 Buckets moved to bucketsonline.site. Browsers keep each website's saves separate, so the old site packs
-// up this iPad's save (coins, items, rank key, account, name, settings) and hands it to the new site in the
-// link itself (after the #, which never leaves the iPad). The new site unpacks it before the game loads.
+// 🚚 Buckets lives at buckets19.github.io/buckets. Browsers keep each website's saves separate, so any other
+// address of the game (bucketsonline.site) packs up this iPad's save (coins, items, rank key, account, name,
+// settings) and hands it to the home site in the link itself (after the #, which never leaves the iPad).
+// The home site unpacks it before the game loads.
 (function(){
-  var NEW='https://bucketsonline.site/', OLD='buckets19.github.io';
+  var HOME='https://buckets19.github.io/buckets/';
   var KEYS=['buckets-save-v1','buckets-acct','buckets-admk','buckets-lbkey','buckets-name','buckets-myname','buckets-muted','buckets-dev','buckets-lastbk','buckets-nolb'];
   var b64=function(str){ var u=new TextEncoder().encode(str), bin=''; for(var i=0;i<u.length;i+=8192) bin+=String.fromCharCode.apply(null, u.subarray(i,i+8192)); return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); };
   var unb64=function(t){ t=t.replace(/-/g,'+').replace(/_/g,'/'); while(t.length%4) t+='='; var bin=atob(t), u=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new TextDecoder().decode(u); };
   try{
-    if(location.protocol==='http:' && /bucketsonline\.site$/.test(location.hostname)){ location.replace('https://'+location.host+location.pathname+location.search+location.hash); return; }   // always the secure address (saves live there)
-    if(location.hostname===OLD){   // the old site: pack up and go
+    if(/^(www\.)?bucketsonline\.site$/.test(location.hostname)){   // not the home site: pack up and go home (http or https: saves live on https, so plain http has nothing to carry)
+      if(location.protocol==='http:'){ location.replace('https://'+location.host+location.pathname+location.search+location.hash); return; }
       var pack={v:1, k:{}}; for(var i=0;i<KEYS.length;i++){ var v=localStorage.getItem(KEYS[i]); if(v!==null) pack.k[KEYS[i]]=v; }
-      document.write('<p style="font:800 20px sans-serif;text-align:center;margin-top:40vh">Buckets moved! Taking you there with your stuff…</p>');
-      location.replace(NEW+'#move='+b64(JSON.stringify(pack))); return; }
+      document.write('<p style="font:800 20px sans-serif;text-align:center;margin-top:40vh">Taking you to Buckets with your stuff…</p>');
+      location.replace(HOME+'#move='+b64(JSON.stringify(pack))); return; }
     var m=/^#move=([A-Za-z0-9_-]+)$/.exec(location.hash||'');
     if(m){ var P=JSON.parse(unb64(m[1])), K=(P&&P.k)||{};
       var games=function(j){ try{ var x=JSON.parse(j||'null'); return x&&x.stats ? (x.stats.games|0) : -1; }catch(e){ return -1; } };
@@ -2202,7 +2203,7 @@ const SERVER_URL='';
 // The admin can point it at a different domain (cfg.gs) if this one ever gets blocked.
 const GAME_SERVER='https://live.bucketsonline.site';
 const OFFICIAL = /^(www\.)?bucketsonline\.site$/.test(location.hostname) || location.hostname==='buckets19.github.io' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-if(!OFFICIAL) addEventListener('DOMContentLoaded', ()=>{ try{ const b=document.createElement('div'); b.textContent='⚠️ This is not the real Buckets. Play at bucketsonline.site'; b.style.cssText='position:fixed;z-index:999;left:0;right:0;top:0;background:#d62828;color:#fff;font:800 16px sans-serif;text-align:center;padding:10px'; document.body.append(b); }catch(e){} });
+if(!OFFICIAL) addEventListener('DOMContentLoaded', ()=>{ try{ const b=document.createElement('div'); b.textContent='⚠️ This is not the real Buckets. Play at buckets19.github.io/buckets'; b.style.cssText='position:fixed;z-index:999;left:0;right:0;top:0;background:#d62828;color:#fff;font:800 16px sans-serif;text-align:center;padding:10px'; document.body.append(b); }catch(e){} });
 function gsURL(){ try{ if(CTL && /^https:\/\/[a-z0-9.-]+$/i.test(CTL.gs||'')) return CTL.gs; }catch(e){} return GAME_SERVER; }
 // can this Wi-Fi reach it, and how fast? (web request round trip, then a real live connection)
 async function gsProbe(){
@@ -2664,7 +2665,7 @@ async function walFlush(){ if(WAL.fl || !SAVE.walMade || !(SAVE.wq||[]).length) 
     if(d && Array.isArray(d.res)){ const done=new Set(d.res.filter(r=>!r.retry).map(r=>r.id)); SAVE.wq=SAVE.wq.filter(x=>!done.has(x.id)); persist(); if(SAVE.wq.length) setTimeout(walFlush, done.size ? 600 : 20000); } }
   catch(e){} finally{ WAL.fl=false; } }
 setTimeout(()=>{ walSync(); }, 1800);
-try{ if(sessionStorage.getItem('bk-moved')){ sessionStorage.removeItem('bk-moved'); setTimeout(()=>toast('🚚 Welcome to the new Buckets! Your stuff came with you. Bookmark this page.'), 1500); } }catch(e){}
+try{ if(sessionStorage.getItem('bk-moved')){ sessionStorage.removeItem('bk-moved'); setTimeout(()=>toast('🚚 Welcome back! Your stuff came with you. Bookmark this page.'), 1500); } }catch(e){}
 try{ if(sessionStorage.getItem('bk-idle')){ sessionStorage.removeItem('bk-idle'); setTimeout(()=>toast('😴 Your room closed after 8 minutes without a game. Start a new one any time!'), 1200); } }catch(e){}
 setInterval(()=>{ if(!V.inRoom && document.visibilityState==='visible') walSync(); }, 300000);
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !V.inRoom && Date.now()-WAL.at>30000) walSync(); });
